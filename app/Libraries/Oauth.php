@@ -1,4 +1,4 @@
-<?php namespace App\Libraries;
+<?php namespace ci4oauth2\Libraries;
 /**
  *
  */

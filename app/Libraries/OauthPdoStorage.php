@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Libraries;
+namespace ci4oauth2\Libraries;
 
 use OAuth2\OpenID\Storage\AuthorizationCodeInterface as OpenIDAuthorizationCodeInterface;
 use OAuth2\OpenID\Storage\UserClaimsInterface;
