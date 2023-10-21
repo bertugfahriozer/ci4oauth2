@@ -31,6 +31,7 @@ class Oauth
             'public_key_table' => 'oauth_public_keys',
         ));
         $this->server=new \OAuth2\Server($this->storage,$config);
+        if(strpos($grantType, "grant-type:jwt-bearer")) $grantType='jwt_bearer';
         call_user_func_array([$this,$grantType],func_get_args());
     }
 
@@ -70,45 +71,4 @@ class Oauth
     {
         $this->server->addGrantType(new \OAuth2\GrantType\JwtBearer($this->storage,'https://oauth'));
     }
-
-    /**
-     * Generate a JWT
-     *
-     * @param $privateKey The private key to use to sign the token
-     * @param $iss The issuer, usually the client_id
-     * @param $sub The subject, usually a user_id
-     * @param $aud The audience, usually the URI for the oauth server
-     * @param $exp The expiration date. If the current time is greater than the exp, the JWT is invalid
-     * @param $nbf The "not before" time. If the current time is less than the nbf, the JWT is invalid
-     * @param $jti The "jwt token identifier", or nonce for this JWT
-     *
-     * @return string
-     */
-    protected function generateJWT($privateKey, $iss, $sub, $aud, $exp = null, $nbf = null, $jti = null): string
-    {
-        if (!$exp) {
-            $exp = time() + 1000;
-        }
-
-        $params = array(
-            'iss' => $iss,
-            'sub' => $sub,
-            'aud' => $aud,
-            'exp' => $exp,
-            'iat' => time(),
-        );
-
-        if ($nbf) {
-            $params['nbf'] = $nbf;
-        }
-
-        if ($jti) {
-            $params['jti'] = $jti;
-        }
-
-        $jwtUtil = new \OAuth2\Encryption\Jwt();
-
-        return $jwtUtil->encode($params, $privateKey, 'RS256');
-    }
-
 }
