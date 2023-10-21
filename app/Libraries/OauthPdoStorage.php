@@ -29,9 +29,22 @@ class OauthPdoStorage implements
     /**
      * @var array
      */
-    protected $config;
+    protected $conf;
 
     protected $commonModel;
+
+    /* --------------------------------------------------------------------
+     * Encryption Algorithm to use
+     * --------------------------------------------------------------------
+     * Valid values are
+     * - PASSWORD_DEFAULT (default)
+     * - PASSWORD_BCRYPT
+     * - PASSWORD_ARGON2I  - As of PHP 7.2 only if compiled with support for it
+     * - PASSWORD_ARGON2ID - As of PHP 7.3 only if compiled with support for it
+     *
+     * If you choose to use any ARGON algorithm, then you might want to
+     * uncomment the "ARGON2i/D Algorithm" options to suit your needs
+     */
 
     /**
      * @param mixed $connection
@@ -41,7 +54,7 @@ class OauthPdoStorage implements
      */
     public function __construct($config = array())
     {
-        $this->config = array_merge(array(
+        $this->conf = array_merge(array(
             'client_table' => 'oauth_clients',
             'access_token_table' => 'oauth_access_tokens',
             'refresh_token_table' => 'oauth_refresh_tokens',
@@ -51,8 +64,13 @@ class OauthPdoStorage implements
             'jti_table' => 'oauth_jti',
             'scope_table' => 'oauth_scopes',
             'public_key_table' => 'oauth_public_keys',
+            'hashAlgorithm' => PASSWORD_DEFAULT,
+            'hashMemoryCost' => 2048,
+            'hashTimeCost' => 4,
+            'hashThreads' => 4,
+            'hashCost' => 10
         ), $config);
-        $this->commonModel=new CommonModel();
+        $this->commonModel = new CommonModel();
     }
 
     /**
@@ -62,7 +80,7 @@ class OauthPdoStorage implements
      */
     public function checkClientCredentials($client_id, $client_secret = null)
     {
-        $result = $this->commonModel->selectOne($this->config['client_table'], ['client_id' => $client_id],'*','');
+        $result = $this->commonModel->selectOne($this->conf['client_table'], ['client_id' => $client_id], '*', '');
 
         // make this extensible
         return $result && $result->client_secret == $client_secret;
@@ -74,7 +92,7 @@ class OauthPdoStorage implements
      */
     public function isPublicClient($client_id)
     {
-        if (!$result = $this->commonModel->selectOne($this->config['client_table'], ['client_id'=>$client_id],'*','')) {
+        if (!$result = $this->commonModel->selectOne($this->conf['client_table'], ['client_id' => $client_id], '*', '')) {
             return false;
         }
 
@@ -87,7 +105,7 @@ class OauthPdoStorage implements
      */
     public function getClientDetails($client_id)
     {
-        return (array)$this->commonModel->selectOne($this->config['client_table'], ['client_id' => $client_id],'*','');
+        return (array)$this->commonModel->selectOne($this->conf['client_table'], ['client_id' => $client_id], '*', '');
     }
 
     /**
@@ -103,9 +121,9 @@ class OauthPdoStorage implements
     {
         // if it exists, update it.
         if ($this->getClientDetails($client_id)) {
-            return $this->commonModel->edit($this->config['client_table'], ['client_secret' => $client_secret, 'redirect_uri' => $redirect_uri, 'grant_types' => $grant_types, 'scope' => $scope, 'user_id' => $user_id], ['client_id' => $client_id]);
+            return $this->commonModel->edit($this->conf['client_table'], ['client_secret' => $client_secret, 'redirect_uri' => $redirect_uri, 'grant_types' => $grant_types, 'scope' => $scope, 'user_id' => $user_id], ['client_id' => $client_id]);
         } else {
-            return $this->commonModel->create($this->config['client_table'], ['client_id' => $client_id, 'client_secret' => $client_secret, 'redirect_uri' => $redirect_uri, 'grant_types' => $grant_types, 'scope' => $scope, 'user_id' => $user_id]);
+            return $this->commonModel->create($this->conf['client_table'], ['client_id' => $client_id, 'client_secret' => $client_secret, 'redirect_uri' => $redirect_uri, 'grant_types' => $grant_types, 'scope' => $scope, 'user_id' => $user_id]);
         }
     }
 
@@ -133,7 +151,7 @@ class OauthPdoStorage implements
      */
     public function getAccessToken($access_token)
     {
-        if ($token = $this->commonModel->selectOne($this->config['access_token_table'], ['access_token' => $access_token],'*','')) {
+        if ($token = $this->commonModel->selectOne($this->conf['access_token_table'], ['access_token' => $access_token], '*', '')) {
             // convert date string back to timestamp
             $token['expires'] = strtotime($token->expires);
         }
@@ -156,9 +174,9 @@ class OauthPdoStorage implements
 
         // if it exists, update it.
         if ($this->getAccessToken($access_token)) {
-            return $this->commonModel->edit($this->config['access_token_table'], ['client_id' => $client_id, 'expires' => $expires, 'user_id' => $user_id, 'scope' => $scope], ['access_token' => $access_token]);
+            return $this->commonModel->edit($this->conf['access_token_table'], ['client_id' => $client_id, 'expires' => $expires, 'user_id' => $user_id, 'scope' => $scope], ['access_token' => $access_token]);
         } else {
-            return $this->commonModel->create($this->config['access_token_table'], ['access_token' => $access_token, 'client_id' => $client_id, 'expires' => $expires, 'user_id' => $user_id, 'scope' => $scope]);
+            return $this->commonModel->create($this->conf['access_token_table'], ['access_token' => $access_token, 'client_id' => $client_id, 'expires' => $expires, 'user_id' => $user_id, 'scope' => $scope]);
         }
     }
 
@@ -168,7 +186,7 @@ class OauthPdoStorage implements
      */
     public function unsetAccessToken($access_token)
     {
-        $stmt = $this->db->prepare(sprintf('DELETE FROM %s WHERE access_token = :access_token', $this->config['access_token_table']));
+        $stmt = $this->db->prepare(sprintf('DELETE FROM %s WHERE access_token = :access_token', $this->conf['access_token_table']));
 
         $stmt->execute(compact('access_token'));
 
@@ -182,7 +200,7 @@ class OauthPdoStorage implements
      */
     public function getAuthorizationCode($code)
     {
-        if ($code = $this->commonModel->selectOne($this->config['code_table'], ['authorization_code' => $code],'*','')) {
+        if ($code = $this->commonModel->selectOne($this->conf['code_table'], ['authorization_code' => $code], '*', '')) {
             // convert date string back to timestamp
             $code->expires = strtotime($code->expires);
         }
@@ -212,9 +230,9 @@ class OauthPdoStorage implements
 
         // if it exists, update it.
         if ($this->getAuthorizationCode($code)) {
-            return $this->commonModel->edit($this->config['code_table'], ['client_id' => $client_id, 'user_id' => $user_id, 'redirect_uri' => $redirect_uri, 'expires' => $expires, 'scope' => $scope, 'code_challenge' => $code_challenge, 'code_challenge_method' => $code_challenge_method], ['authorization_code', $code]);
+            return $this->commonModel->edit($this->conf['code_table'], ['client_id' => $client_id, 'user_id' => $user_id, 'redirect_uri' => $redirect_uri, 'expires' => $expires, 'scope' => $scope, 'code_challenge' => $code_challenge, 'code_challenge_method' => $code_challenge_method], ['authorization_code', $code]);
         } else {
-            return $this->commonModel->create($this->config['code_table'], ['authorization_code' => $code, 'client_id' => $client_id, 'user_id' => $user_id, 'redirect_uri' => $redirect_uri, 'expires' => $expires, 'scope' => $scope, 'code_challenge' => $code_challenge, 'code_challenge_method' => $code_challenge_method]);
+            return $this->commonModel->create($this->conf['code_table'], ['authorization_code' => $code, 'client_id' => $client_id, 'user_id' => $user_id, 'redirect_uri' => $redirect_uri, 'expires' => $expires, 'scope' => $scope, 'code_challenge' => $code_challenge, 'code_challenge_method' => $code_challenge_method]);
         }
     }
 
@@ -233,8 +251,8 @@ class OauthPdoStorage implements
         // convert expires to datestring
         $expires = date('Y-m-d H:i:s', $expires);
         // if it exists, update it.
-        if ($this->getAuthorizationCode($code)) return $this->commonModel->edit($this->config['code_table'], ['client_id' => $client_id, 'user_id' => $user_id, 'redirect_uri' => $redirect_uri, 'expires' => $expires, 'scope' => $scope, 'id_token' => $id_token, 'code_challenge' => $code_challenge, 'code_challenge_method' => $code_challenge_method], ['authorization_code' => $code]);
-        else return $this->commonModel->create($this->config['code_table'], ['authorization_code' => $code, 'client_id' => $client_id, 'user_id' => $user_id, 'redirect_uri' => $redirect_uri, 'expires' => $expires, 'scope' => $scope, 'id_token' => $id_token, 'code_challenge' => $code_challenge, 'code_challenge_method' => $code_challenge_method]);
+        if ($this->getAuthorizationCode($code)) return $this->commonModel->edit($this->conf['code_table'], ['client_id' => $client_id, 'user_id' => $user_id, 'redirect_uri' => $redirect_uri, 'expires' => $expires, 'scope' => $scope, 'id_token' => $id_token, 'code_challenge' => $code_challenge, 'code_challenge_method' => $code_challenge_method], ['authorization_code' => $code]);
+        else return $this->commonModel->create($this->conf['code_table'], ['authorization_code' => $code, 'client_id' => $client_id, 'user_id' => $user_id, 'redirect_uri' => $redirect_uri, 'expires' => $expires, 'scope' => $scope, 'id_token' => $id_token, 'code_challenge' => $code_challenge, 'code_challenge_method' => $code_challenge_method]);
     }
 
     /**
@@ -243,7 +261,7 @@ class OauthPdoStorage implements
      */
     public function expireAuthorizationCode($code)
     {
-        return $this->commonModel->remove($this->config['code_table'], ['authorization_code' => $code]);
+        return $this->commonModel->remove($this->conf['code_table'], ['authorization_code' => $code]);
     }
 
     /**
@@ -323,7 +341,7 @@ class OauthPdoStorage implements
      */
     public function getRefreshToken($refresh_token)
     {
-        $token = $this->commonModel->selectOne($this->config['refresh_token_table'], ['refresh_token' => $refresh_token],'*','');
+        $token = $this->commonModel->selectOne($this->conf['refresh_token_table'], ['refresh_token' => $refresh_token], '*', '');
         // convert expires to epoch time
         $token->expires = strtotime($token->expires);
         return (array)$token;
@@ -341,7 +359,7 @@ class OauthPdoStorage implements
     {
         // convert expires to datestring
         $expires = date('Y-m-d H:i:s', $expires);
-        return $this->commonModel->create($this->config['refresh_token_table'], ['refresh_token' => $refresh_token, 'client_id' => $client_id, 'user_id' => $user_id, 'expires' => $expires, 'scope' => $scope]);
+        return $this->commonModel->create($this->conf['refresh_token_table'], ['refresh_token' => $refresh_token, 'client_id' => $client_id, 'user_id' => $user_id, 'expires' => $expires, 'scope' => $scope]);
     }
 
     /**
@@ -350,7 +368,7 @@ class OauthPdoStorage implements
      */
     public function unsetRefreshToken($refresh_token)
     {
-        return $this->commonModel->remove($this->config['refresh_token_table'],['refresh_token'=>$refresh_token]);
+        return $this->commonModel->remove($this->conf['refresh_token_table'], ['refresh_token' => $refresh_token]);
     }
 
     /**
@@ -362,13 +380,21 @@ class OauthPdoStorage implements
      */
     protected function checkPassword($user, $password)
     {
-        return $user['password'] == $this->hashPassword($password);
+        if(!password_verify(base64_encode(hash('sha384', $password, true)), $user['password'])) return false;
+        if (password_needs_rehash($user['password'], $this->conf['hashAlgorithm'])) {
+            $user['password'] = $password;
+            $this->commonModel->edit($this->conf['user_table'], $user, ['username' => $user['user_id']]);
+        }
+        return $user['password'];
     }
 
     // use a secure hashing algorithm when storing passwords. Override this for your application
     protected function hashPassword($password)
     {
-        return sha1($password);
+        if ((defined('PASSWORD_ARGON2I') && $this->conf['hashAlgorithm'] == PASSWORD_ARGON2I) || (defined('PASSWORD_ARGON2ID') && $this->conf['hashAlgorithm'] == PASSWORD_ARGON2ID))
+            $hashOptions = ['memory_cost' => $this->conf['hashMemoryCost'], 'time_cost' => $this->conf['hashTimeCost'], 'threads' => $this->conf['hashThreads']];
+        else $hashOptions = ['cost' => $this->conf['hashCost']];
+        return password_hash(base64_encode(hash('sha384', $password, true)), $this->conf['hashAlgorithm'], $hashOptions);
     }
 
     /**
@@ -377,9 +403,11 @@ class OauthPdoStorage implements
      */
     public function getUser($username)
     {
-        $result = $this->commonModel->selectOne($this->config['user_table'], ['username' => $username],'*','');
-        $result->user_id = $result->username;
-        return (array)$result;
+        $result = $this->commonModel->selectOne($this->conf['user_table'], ['username' => $username], '*', '');
+        if (!empty($result)) {
+            $result->user_id = $result->username;
+            return (array)$result;
+        } else false;
     }
 
     /**
@@ -397,8 +425,8 @@ class OauthPdoStorage implements
         $password = $this->hashPassword($password);
 
         // if it exists, update it.
-        if ($this->getUser($username)) return $this->commonModel->edit($this->config['user_table'], ['password' => $password, 'first_name' => $firstName, 'last_name' => $lastName], ['username' => $username]);
-        else return $this->commonModel->create($this->config['user_table'], ['username' => $username, 'password' => $password, 'first_name' => $firstName, 'last_name' => $lastName]);
+        if ($this->getUser($username)) return $this->commonModel->edit($this->conf['user_table'], ['password' => $password, 'first_name' => $firstName, 'last_name' => $lastName], ['username' => $username]);
+        else return $this->commonModel->create($this->conf['user_table'], ['username' => $username, 'password' => $password, 'first_name' => $firstName, 'last_name' => $lastName]);
     }
 
     /**
@@ -407,7 +435,7 @@ class OauthPdoStorage implements
      */
     public function scopeExists($scope)
     {
-        $c = $this->commonModel->count($this->config['scope_table'], ['scope' => $scope]);
+        $c = $this->commonModel->count($this->conf['scope_table'], ['scope' => $scope]);
         if ($c >= 0) return $c;
         return false;
     }
@@ -418,7 +446,7 @@ class OauthPdoStorage implements
      */
     public function getDefaultScope($client_id = null)
     {
-        if ($result = (array)$this->commonModel->selectOne($this->config['scope_table'],['is_default'=>true],'*','')) {
+        if ($result = (array)$this->commonModel->selectOne($this->conf['scope_table'], ['is_default' => true], '*', '')) {
             $defaultScope = array_map(function ($row) {
                 return $row['scope'];
             }, $result);
@@ -436,7 +464,7 @@ class OauthPdoStorage implements
      */
     public function getClientKey($client_id, $subject)
     {
-        return (array)$this->commonModel->selectOne($this->config['jwt_table'],['cilient_id' => $client_id,'subject'=>$subject],'public_key','');
+        return (array)$this->commonModel->selectOne($this->conf['jwt_table'], ['cilient_id' => $client_id, 'subject' => $subject], 'public_key', '');
     }
 
     /**
@@ -466,7 +494,7 @@ class OauthPdoStorage implements
      */
     public function getJti($client_id, $subject, $audience, $expires, $jti)
     {
-        if ($result = $this->commonModel->selectOne($this->config['jti_table'],['issuer'=>$client_id,'subject'=>$subject,'audience'=>$audience,'expires'=>$expires,'jti'=>$jti],'*','')) {
+        if ($result = $this->commonModel->selectOne($this->conf['jti_table'], ['issuer' => $client_id, 'subject' => $subject, 'audience' => $audience, 'expires' => $expires, 'jti' => $jti], '*', '')) {
             return array(
                 'issuer' => $result->issuer,
                 'subject' => $result->subject,
@@ -489,7 +517,7 @@ class OauthPdoStorage implements
      */
     public function setJti($client_id, $subject, $audience, $expires, $jti)
     {
-        return $this->commonModel->create($this->config['jti_table'],['issuer'=>$client_id, 'subject'=>$subject, 'audience'=>$audience, 'expires'=>$expires, 'jti'=>$jti]);
+        return $this->commonModel->create($this->conf['jti_table'], ['issuer' => $client_id, 'subject' => $subject, 'audience' => $audience, 'expires' => $expires, 'jti' => $jti]);
     }
 
     /**
@@ -498,7 +526,7 @@ class OauthPdoStorage implements
      */
     public function getPublicKey($client_id = null)
     {
-        $stmt = $this->db->prepare($sql = sprintf('SELECT public_key FROM %s WHERE client_id=:client_id OR client_id IS NULL ORDER BY client_id IS NOT NULL DESC', $this->config['public_key_table']));
+        $stmt = $this->db->prepare($sql = sprintf('SELECT public_key FROM %s WHERE client_id=:client_id OR client_id IS NULL ORDER BY client_id IS NOT NULL DESC', $this->conf['public_key_table']));
 
         $stmt->execute(compact('client_id'));
         if ($result = $stmt->fetch(\PDO::FETCH_ASSOC)) {
@@ -512,7 +540,7 @@ class OauthPdoStorage implements
      */
     public function getPrivateKey($client_id = null)
     {
-        $stmt = $this->db->prepare($sql = sprintf('SELECT private_key FROM %s WHERE client_id=:client_id OR client_id IS NULL ORDER BY client_id IS NOT NULL DESC', $this->config['public_key_table']));
+        $stmt = $this->db->prepare($sql = sprintf('SELECT private_key FROM %s WHERE client_id=:client_id OR client_id IS NULL ORDER BY client_id IS NOT NULL DESC', $this->conf['public_key_table']));
 
         $stmt->execute(compact('client_id'));
         if ($result = $stmt->fetch(\PDO::FETCH_ASSOC)) {
@@ -526,7 +554,7 @@ class OauthPdoStorage implements
      */
     public function getEncryptionAlgorithm($client_id = null)
     {
-        $stmt = $this->db->prepare($sql = sprintf('SELECT encryption_algorithm FROM %s WHERE client_id=:client_id OR client_id IS NULL ORDER BY client_id IS NOT NULL DESC', $this->config['public_key_table']));
+        $stmt = $this->db->prepare($sql = sprintf('SELECT encryption_algorithm FROM %s WHERE client_id=:client_id OR client_id IS NULL ORDER BY client_id IS NOT NULL DESC', $this->conf['public_key_table']));
 
         $stmt->execute(compact('client_id'));
         if ($result = $stmt->fetch(\PDO::FETCH_ASSOC)) {
@@ -547,7 +575,7 @@ class OauthPdoStorage implements
     public function getBuildSql($dbName = 'oauth2_server_php')
     {
         $sql = "
-        CREATE TABLE {$this->config['client_table']} (
+        CREATE TABLE {$this->conf['client_table']} (
           client_id             VARCHAR(80)   NOT NULL,
           client_secret         VARCHAR(80),
           redirect_uri          VARCHAR(2000),
@@ -557,7 +585,7 @@ class OauthPdoStorage implements
           PRIMARY KEY (client_id)
         );
 
-            CREATE TABLE {$this->config['access_token_table']} (
+            CREATE TABLE {$this->conf['access_token_table']} (
               access_token         VARCHAR(40)    NOT NULL,
               client_id            VARCHAR(80)    NOT NULL,
               user_id              VARCHAR(80),
@@ -566,7 +594,7 @@ class OauthPdoStorage implements
               PRIMARY KEY (access_token)
             );
 
-            CREATE TABLE {$this->config['code_table']} (
+            CREATE TABLE {$this->conf['code_table']} (
               authorization_code  VARCHAR(40)    NOT NULL,
               client_id           VARCHAR(80)    NOT NULL,
               user_id             VARCHAR(80),
@@ -579,7 +607,7 @@ class OauthPdoStorage implements
               PRIMARY KEY (authorization_code)
             );
 
-            CREATE TABLE {$this->config['refresh_token_table']} (
+            CREATE TABLE {$this->conf['refresh_token_table']} (
               refresh_token       VARCHAR(40)    NOT NULL,
               client_id           VARCHAR(80)    NOT NULL,
               user_id             VARCHAR(80),
@@ -588,7 +616,7 @@ class OauthPdoStorage implements
               PRIMARY KEY (refresh_token)
             );
 
-            CREATE TABLE {$this->config['user_table']} (
+            CREATE TABLE {$this->conf['user_table']} (
               username            VARCHAR(80),
               password            VARCHAR(80),
               first_name          VARCHAR(80),
@@ -598,19 +626,19 @@ class OauthPdoStorage implements
               scope               VARCHAR(4000)
             );
 
-            CREATE TABLE {$this->config['scope_table']} (
+            CREATE TABLE {$this->conf['scope_table']} (
               scope               VARCHAR(80)  NOT NULL,
               is_default          BOOLEAN,
               PRIMARY KEY (scope)
             );
 
-            CREATE TABLE {$this->config['jwt_table']} (
+            CREATE TABLE {$this->conf['jwt_table']} (
               client_id           VARCHAR(80)   NOT NULL,
               subject             VARCHAR(80),
               public_key          VARCHAR(2000) NOT NULL
             );
 
-            CREATE TABLE {$this->config['jti_table']} (
+            CREATE TABLE {$this->conf['jti_table']} (
               issuer              VARCHAR(80)   NOT NULL,
               subject             VARCHAR(80),
               audiance            VARCHAR(80),
@@ -618,7 +646,7 @@ class OauthPdoStorage implements
               jti                 VARCHAR(2000) NOT NULL
             );
 
-            CREATE TABLE {$this->config['public_key_table']} (
+            CREATE TABLE {$this->conf['public_key_table']} (
               client_id            VARCHAR(80),
               public_key           VARCHAR(2000),
               private_key          VARCHAR(2000),
