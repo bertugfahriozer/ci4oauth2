@@ -19,7 +19,7 @@ class Oauth
      */
     public function __construct(string $grantType='password', array $config=[])
     {
-        $this->storage=new \App\Libraries\OauthPdoStorage(array(
+        $this->storage=new \ci4oauth2\Libraries\OauthPdoStorage(array(
             'client_table' => 'oauth_clients',
             'access_token_table' => 'oauth_access_tokens',
             'refresh_token_table' => 'oauth_refresh_tokens',
