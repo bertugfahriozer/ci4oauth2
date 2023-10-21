@@ -1,0 +1,631 @@
+<?php
+
+namespace App\Libraries;
+
+use OAuth2\OpenID\Storage\AuthorizationCodeInterface as OpenIDAuthorizationCodeInterface;
+use OAuth2\OpenID\Storage\UserClaimsInterface;
+use OAuth2\Storage\AccessTokenInterface;
+use OAuth2\Storage\AuthorizationCodeInterface;
+use OAuth2\Storage\ClientCredentialsInterface;
+use OAuth2\Storage\JwtBearerInterface;
+use OAuth2\Storage\PublicKeyInterface;
+use OAuth2\Storage\RefreshTokenInterface;
+use OAuth2\Storage\ScopeInterface;
+use OAuth2\Storage\UserCredentialsInterface;
+use ci4commonmodel\Models\CommonModel;
+
+class OauthPdoStorage implements
+    AuthorizationCodeInterface,
+    AccessTokenInterface,
+    ClientCredentialsInterface,
+    UserCredentialsInterface,
+    RefreshTokenInterface,
+    JwtBearerInterface,
+    ScopeInterface,
+    PublicKeyInterface,
+    UserClaimsInterface,
+    OpenIDAuthorizationCodeInterface
+{
+    /**
+     * @var array
+     */
+    protected $config;
+
+    protected $commonModel;
+
+    /**
+     * @param mixed $connection
+     * @param array $config
+     *
+     * @throws InvalidArgumentException
+     */
+    public function __construct($config = array())
+    {
+        $this->config = array_merge(array(
+            'client_table' => 'oauth_clients',
+            'access_token_table' => 'oauth_access_tokens',
+            'refresh_token_table' => 'oauth_refresh_tokens',
+            'code_table' => 'oauth_authorization_codes',
+            'user_table' => 'oauth_users',
+            'jwt_table' => 'oauth_jwt',
+            'jti_table' => 'oauth_jti',
+            'scope_table' => 'oauth_scopes',
+            'public_key_table' => 'oauth_public_keys',
+        ), $config);
+        $this->commonModel=new CommonModel();
+    }
+
+    /**
+     * @param string $client_id
+     * @param null|string $client_secret
+     * @return bool
+     */
+    public function checkClientCredentials($client_id, $client_secret = null)
+    {
+        $result = $this->commonModel->selectOne($this->config['client_table'], ['client_id' => $client_id],'*','');
+
+        // make this extensible
+        return $result && $result->client_secret == $client_secret;
+    }
+
+    /**
+     * @param string $client_id
+     * @return bool
+     */
+    public function isPublicClient($client_id)
+    {
+        if (!$result = $this->commonModel->selectOne($this->config['client_table'], ['client_id'=>$client_id],'*','')) {
+            return false;
+        }
+
+        return empty($result->client_secret);
+    }
+
+    /**
+     * @param string $client_id
+     * @return array|mixed
+     */
+    public function getClientDetails($client_id)
+    {
+        return (array)$this->commonModel->selectOne($this->config['client_table'], ['client_id' => $client_id],'*','');
+    }
+
+    /**
+     * @param string $client_id
+     * @param null|string $client_secret
+     * @param null|string $redirect_uri
+     * @param null|array $grant_types
+     * @param null|string $scope
+     * @param null|string $user_id
+     * @return bool
+     */
+    public function setClientDetails($client_id, $client_secret = null, $redirect_uri = null, $grant_types = null, $scope = null, $user_id = null)
+    {
+        // if it exists, update it.
+        if ($this->getClientDetails($client_id)) {
+            return $this->commonModel->edit($this->config['client_table'], ['client_secret' => $client_secret, 'redirect_uri' => $redirect_uri, 'grant_types' => $grant_types, 'scope' => $scope, 'user_id' => $user_id], ['client_id' => $client_id]);
+        } else {
+            return $this->commonModel->create($this->config['client_table'], ['client_id' => $client_id, 'client_secret' => $client_secret, 'redirect_uri' => $redirect_uri, 'grant_types' => $grant_types, 'scope' => $scope, 'user_id' => $user_id]);
+        }
+    }
+
+    /**
+     * @param $client_id
+     * @param $grant_type
+     * @return bool
+     */
+    public function checkRestrictedGrantType($client_id, $grant_type)
+    {
+        $details = $this->getClientDetails($client_id);
+        if (isset($details->grant_types)) {
+            $grant_types = explode(' ', $details->grant_types);
+
+            return in_array($grant_type, (array)$grant_types);
+        }
+
+        // if grant_types are not defined, then none are restricted
+        return true;
+    }
+
+    /**
+     * @param string $access_token
+     * @return array|bool|mixed|null
+     */
+    public function getAccessToken($access_token)
+    {
+        if ($token = $this->commonModel->selectOne($this->config['access_token_table'], ['access_token' => $access_token],'*','')) {
+            // convert date string back to timestamp
+            $token['expires'] = strtotime($token->expires);
+        }
+
+        return $token;
+    }
+
+    /**
+     * @param string $access_token
+     * @param mixed $client_id
+     * @param mixed $user_id
+     * @param int $expires
+     * @param string $scope
+     * @return bool
+     */
+    public function setAccessToken($access_token, $client_id, $user_id, $expires, $scope = null)
+    {
+        // convert expires to datestring
+        $expires = date('Y-m-d H:i:s', $expires);
+
+        // if it exists, update it.
+        if ($this->getAccessToken($access_token)) {
+            return $this->commonModel->edit($this->config['access_token_table'], ['client_id' => $client_id, 'expires' => $expires, 'user_id' => $user_id, 'scope' => $scope], ['access_token' => $access_token]);
+        } else {
+            return $this->commonModel->create($this->config['access_token_table'], ['access_token' => $access_token, 'client_id' => $client_id, 'expires' => $expires, 'user_id' => $user_id, 'scope' => $scope]);
+        }
+    }
+
+    /**
+     * @param $access_token
+     * @return bool
+     */
+    public function unsetAccessToken($access_token)
+    {
+        $stmt = $this->db->prepare(sprintf('DELETE FROM %s WHERE access_token = :access_token', $this->config['access_token_table']));
+
+        $stmt->execute(compact('access_token'));
+
+        return $stmt->rowCount() > 0;
+    }
+
+    /* OAuth2\Storage\AuthorizationCodeInterface */
+    /**
+     * @param string $code
+     * @return mixed
+     */
+    public function getAuthorizationCode($code)
+    {
+        if ($code = $this->commonModel->selectOne($this->config['code_table'], ['authorization_code' => $code],'*','')) {
+            // convert date string back to timestamp
+            $code->expires = strtotime($code->expires);
+        }
+
+        return (array)$code;
+    }
+
+    /**
+     * @param string $code
+     * @param mixed $client_id
+     * @param mixed $user_id
+     * @param string $redirect_uri
+     * @param int $expires
+     * @param string $scope
+     * @param string $id_token
+     * @return bool|mixed
+     */
+    public function setAuthorizationCode($code, $client_id, $user_id, $redirect_uri, $expires, $scope = null, $id_token = null, $code_challenge = null, $code_challenge_method = null)
+    {
+        if (func_num_args() > 6) {
+            // we are calling with an id token
+            return call_user_func_array(array($this, 'setAuthorizationCodeWithIdToken'), func_get_args());
+        }
+
+        // convert expires to datestring
+        $expires = date('Y-m-d H:i:s', $expires);
+
+        // if it exists, update it.
+        if ($this->getAuthorizationCode($code)) {
+            return $this->commonModel->edit($this->config['code_table'], ['client_id' => $client_id, 'user_id' => $user_id, 'redirect_uri' => $redirect_uri, 'expires' => $expires, 'scope' => $scope, 'code_challenge' => $code_challenge, 'code_challenge_method' => $code_challenge_method], ['authorization_code', $code]);
+        } else {
+            return $this->commonModel->create($this->config['code_table'], ['authorization_code' => $code, 'client_id' => $client_id, 'user_id' => $user_id, 'redirect_uri' => $redirect_uri, 'expires' => $expires, 'scope' => $scope, 'code_challenge' => $code_challenge, 'code_challenge_method' => $code_challenge_method]);
+        }
+    }
+
+    /**
+     * @param string $code
+     * @param mixed $client_id
+     * @param mixed $user_id
+     * @param string $redirect_uri
+     * @param string $expires
+     * @param string $scope
+     * @param string $id_token
+     * @return bool
+     */
+    private function setAuthorizationCodeWithIdToken($code, $client_id, $user_id, $redirect_uri, $expires, $scope = null, $id_token = null, $code_challenge = null, $code_challenge_method = null)
+    {
+        // convert expires to datestring
+        $expires = date('Y-m-d H:i:s', $expires);
+        // if it exists, update it.
+        if ($this->getAuthorizationCode($code)) return $this->commonModel->edit($this->config['code_table'], ['client_id' => $client_id, 'user_id' => $user_id, 'redirect_uri' => $redirect_uri, 'expires' => $expires, 'scope' => $scope, 'id_token' => $id_token, 'code_challenge' => $code_challenge, 'code_challenge_method' => $code_challenge_method], ['authorization_code' => $code]);
+        else return $this->commonModel->create($this->config['code_table'], ['authorization_code' => $code, 'client_id' => $client_id, 'user_id' => $user_id, 'redirect_uri' => $redirect_uri, 'expires' => $expires, 'scope' => $scope, 'id_token' => $id_token, 'code_challenge' => $code_challenge, 'code_challenge_method' => $code_challenge_method]);
+    }
+
+    /**
+     * @param string $code
+     * @return bool
+     */
+    public function expireAuthorizationCode($code)
+    {
+        return $this->commonModel->remove($this->config['code_table'], ['authorization_code' => $code]);
+    }
+
+    /**
+     * @param string $username
+     * @param string $password
+     * @return bool
+     */
+    public function checkUserCredentials($username, $password)
+    {
+        if ($user = $this->getUser($username)) {
+            return $this->checkPassword((array)$user, $password);
+        }
+
+        return false;
+    }
+
+    /**
+     * @param string $username
+     * @return array|bool
+     */
+    public function getUserDetails($username)
+    {
+        return $this->getUser($username);
+    }
+
+    /**
+     * @param mixed $user_id
+     * @param string $claims
+     * @return array|bool
+     */
+    public function getUserClaims($user_id, $claims)
+    {
+        if (!$userDetails = $this->getUserDetails($user_id)) {
+            return false;
+        }
+
+        $claims = explode(' ', trim($claims));
+        $userClaims = array();
+
+        // for each requested claim, if the user has the claim, set it in the response
+        $validClaims = explode(' ', self::VALID_CLAIMS);
+        foreach ($validClaims as $validClaim) {
+            if (in_array($validClaim, $claims)) {
+                if ($validClaim == 'address') {
+                    // address is an object with subfields
+                    $userClaims['address'] = $this->getUserClaim($validClaim, $userDetails['address'] ?: $userDetails);
+                } else {
+                    $userClaims = array_merge($userClaims, $this->getUserClaim($validClaim, $userDetails));
+                }
+            }
+        }
+
+        return $userClaims;
+    }
+
+    /**
+     * @param string $claim
+     * @param array $userDetails
+     * @return array
+     */
+    protected function getUserClaim($claim, $userDetails)
+    {
+        $userClaims = array();
+        $claimValuesString = constant(sprintf('self::%s_CLAIM_VALUES', strtoupper($claim)));
+        $claimValues = explode(' ', $claimValuesString);
+
+        foreach ($claimValues as $value) {
+            $userClaims[$value] = isset($userDetails[$value]) ? $userDetails[$value] : null;
+        }
+
+        return $userClaims;
+    }
+
+    /**
+     * @param string $refresh_token
+     * @return bool|mixed
+     */
+    public function getRefreshToken($refresh_token)
+    {
+        $token = $this->commonModel->selectOne($this->config['refresh_token_table'], ['refresh_token' => $refresh_token],'*','');
+        // convert expires to epoch time
+        $token->expires = strtotime($token->expires);
+        return (array)$token;
+    }
+
+    /**
+     * @param string $refresh_token
+     * @param mixed $client_id
+     * @param mixed $user_id
+     * @param string $expires
+     * @param string $scope
+     * @return bool
+     */
+    public function setRefreshToken($refresh_token, $client_id, $user_id, $expires, $scope = null)
+    {
+        // convert expires to datestring
+        $expires = date('Y-m-d H:i:s', $expires);
+        return $this->commonModel->create($this->config['refresh_token_table'], ['refresh_token' => $refresh_token, 'client_id' => $client_id, 'user_id' => $user_id, 'expires' => $expires, 'scope' => $scope]);
+    }
+
+    /**
+     * @param string $refresh_token
+     * @return bool
+     */
+    public function unsetRefreshToken($refresh_token)
+    {
+        return $this->commonModel->remove($this->config['refresh_token_table'],['refresh_token'=>$refresh_token]);
+    }
+
+    /**
+     * plaintext passwords are bad!  Override this for your application
+     *
+     * @param array $user
+     * @param string $password
+     * @return bool
+     */
+    protected function checkPassword($user, $password)
+    {
+        return $user['password'] == $this->hashPassword($password);
+    }
+
+    // use a secure hashing algorithm when storing passwords. Override this for your application
+    protected function hashPassword($password)
+    {
+        return sha1($password);
+    }
+
+    /**
+     * @param string $username
+     * @return array|bool
+     */
+    public function getUser($username)
+    {
+        $result = $this->commonModel->selectOne($this->config['user_table'], ['username' => $username],'*','');
+        $result->user_id = $result->username;
+        return (array)$result;
+    }
+
+    /**
+     * plaintext passwords are bad!  Override this for your application
+     *
+     * @param string $username
+     * @param string $password
+     * @param string $firstName
+     * @param string $lastName
+     * @return bool
+     */
+    public function setUser($username, $password, $firstName = null, $lastName = null)
+    {
+        // do not store in plaintext
+        $password = $this->hashPassword($password);
+
+        // if it exists, update it.
+        if ($this->getUser($username)) return $this->commonModel->edit($this->config['user_table'], ['password' => $password, 'first_name' => $firstName, 'last_name' => $lastName], ['username' => $username]);
+        else return $this->commonModel->create($this->config['user_table'], ['username' => $username, 'password' => $password, 'first_name' => $firstName, 'last_name' => $lastName]);
+    }
+
+    /**
+     * @param string $scope
+     * @return bool
+     */
+    public function scopeExists($scope)
+    {
+        $c = $this->commonModel->count($this->config['scope_table'], ['scope' => $scope]);
+        if ($c >= 0) return $c;
+        return false;
+    }
+
+    /**
+     * @param mixed $client_id
+     * @return null|string
+     */
+    public function getDefaultScope($client_id = null)
+    {
+        if ($result = (array)$this->commonModel->selectOne($this->config['scope_table'],['is_default'=>true],'*','')) {
+            $defaultScope = array_map(function ($row) {
+                return $row['scope'];
+            }, $result);
+
+            return implode(' ', $defaultScope);
+        }
+
+        return null;
+    }
+
+    /**
+     * @param mixed $client_id
+     * @param $subject
+     * @return string
+     */
+    public function getClientKey($client_id, $subject)
+    {
+        return (array)$this->commonModel->selectOne($this->config['jwt_table'],['cilient_id' => $client_id,'subject'=>$subject],'public_key','');
+    }
+
+    /**
+     * @param mixed $client_id
+     * @return bool|null
+     */
+    public function getClientScope($client_id)
+    {
+        if (!$clientDetails = $this->getClientDetails($client_id)) {
+            return false;
+        }
+
+        if (isset($clientDetails['scope'])) {
+            return $clientDetails['scope'];
+        }
+
+        return null;
+    }
+
+    /**
+     * @param mixed $client_id
+     * @param $subject
+     * @param $audience
+     * @param $expires
+     * @param $jti
+     * @return array|null
+     */
+    public function getJti($client_id, $subject, $audience, $expires, $jti)
+    {
+        if ($result = $this->commonModel->selectOne($this->config['jti_table'],['issuer'=>$client_id,'subject'=>$subject,'audience'=>$audience,'expires'=>$expires,'jti'=>$jti],'*','')) {
+            return array(
+                'issuer' => $result->issuer,
+                'subject' => $result->subject,
+                'audience' => $result->audience,
+                'expires' => $result->expires,
+                'jti' => $result->jti,
+            );
+        }
+
+        return null;
+    }
+
+    /**
+     * @param mixed $client_id
+     * @param $subject
+     * @param $audience
+     * @param $expires
+     * @param $jti
+     * @return bool
+     */
+    public function setJti($client_id, $subject, $audience, $expires, $jti)
+    {
+        return $this->commonModel->create($this->config['jti_table'],['issuer'=>$client_id, 'subject'=>$subject, 'audience'=>$audience, 'expires'=>$expires, 'jti'=>$jti]);
+    }
+
+    /**
+     * @param mixed $client_id
+     * @return mixed
+     */
+    public function getPublicKey($client_id = null)
+    {
+        $stmt = $this->db->prepare($sql = sprintf('SELECT public_key FROM %s WHERE client_id=:client_id OR client_id IS NULL ORDER BY client_id IS NOT NULL DESC', $this->config['public_key_table']));
+
+        $stmt->execute(compact('client_id'));
+        if ($result = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+            return $result['public_key'];
+        }
+    }
+
+    /**
+     * @param mixed $client_id
+     * @return mixed
+     */
+    public function getPrivateKey($client_id = null)
+    {
+        $stmt = $this->db->prepare($sql = sprintf('SELECT private_key FROM %s WHERE client_id=:client_id OR client_id IS NULL ORDER BY client_id IS NOT NULL DESC', $this->config['public_key_table']));
+
+        $stmt->execute(compact('client_id'));
+        if ($result = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+            return $result['private_key'];
+        }
+    }
+
+    /**
+     * @param mixed $client_id
+     * @return string
+     */
+    public function getEncryptionAlgorithm($client_id = null)
+    {
+        $stmt = $this->db->prepare($sql = sprintf('SELECT encryption_algorithm FROM %s WHERE client_id=:client_id OR client_id IS NULL ORDER BY client_id IS NOT NULL DESC', $this->config['public_key_table']));
+
+        $stmt->execute(compact('client_id'));
+        if ($result = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+            return $result['encryption_algorithm'];
+        }
+
+        return 'RS256';
+    }
+
+    /**
+     * DDL to create OAuth2 database and tables for PDO storage
+     *
+     * @see https://github.com/dsquier/oauth2-server-php-mysql
+     *
+     * @param string $dbName
+     * @return string
+     */
+    public function getBuildSql($dbName = 'oauth2_server_php')
+    {
+        $sql = "
+        CREATE TABLE {$this->config['client_table']} (
+          client_id             VARCHAR(80)   NOT NULL,
+          client_secret         VARCHAR(80),
+          redirect_uri          VARCHAR(2000),
+          grant_types           VARCHAR(80),
+          scope                 VARCHAR(4000),
+          user_id               VARCHAR(80),
+          PRIMARY KEY (client_id)
+        );
+
+            CREATE TABLE {$this->config['access_token_table']} (
+              access_token         VARCHAR(40)    NOT NULL,
+              client_id            VARCHAR(80)    NOT NULL,
+              user_id              VARCHAR(80),
+              expires              TIMESTAMP      NOT NULL,
+              scope                VARCHAR(4000),
+              PRIMARY KEY (access_token)
+            );
+
+            CREATE TABLE {$this->config['code_table']} (
+              authorization_code  VARCHAR(40)    NOT NULL,
+              client_id           VARCHAR(80)    NOT NULL,
+              user_id             VARCHAR(80),
+              redirect_uri        VARCHAR(2000),
+              expires             TIMESTAMP      NOT NULL,
+              scope               VARCHAR(4000),
+              id_token            VARCHAR(1000),
+              code_challenge        VARCHAR(1000),
+              code_challenge_method VARCHAR(20),
+              PRIMARY KEY (authorization_code)
+            );
+
+            CREATE TABLE {$this->config['refresh_token_table']} (
+              refresh_token       VARCHAR(40)    NOT NULL,
+              client_id           VARCHAR(80)    NOT NULL,
+              user_id             VARCHAR(80),
+              expires             TIMESTAMP      NOT NULL,
+              scope               VARCHAR(4000),
+              PRIMARY KEY (refresh_token)
+            );
+
+            CREATE TABLE {$this->config['user_table']} (
+              username            VARCHAR(80),
+              password            VARCHAR(80),
+              first_name          VARCHAR(80),
+              last_name           VARCHAR(80),
+              email               VARCHAR(80),
+              email_verified      BOOLEAN,
+              scope               VARCHAR(4000)
+            );
+
+            CREATE TABLE {$this->config['scope_table']} (
+              scope               VARCHAR(80)  NOT NULL,
+              is_default          BOOLEAN,
+              PRIMARY KEY (scope)
+            );
+
+            CREATE TABLE {$this->config['jwt_table']} (
+              client_id           VARCHAR(80)   NOT NULL,
+              subject             VARCHAR(80),
+              public_key          VARCHAR(2000) NOT NULL
+            );
+
+            CREATE TABLE {$this->config['jti_table']} (
+              issuer              VARCHAR(80)   NOT NULL,
+              subject             VARCHAR(80),
+              audiance            VARCHAR(80),
+              expires             TIMESTAMP     NOT NULL,
+              jti                 VARCHAR(2000) NOT NULL
+            );
+
+            CREATE TABLE {$this->config['public_key_table']} (
+              client_id            VARCHAR(80),
+              public_key           VARCHAR(2000),
+              private_key          VARCHAR(2000),
+              encryption_algorithm VARCHAR(100) DEFAULT 'RS256'
+            )
+        ";
+
+        return $sql;
+    }
+}
