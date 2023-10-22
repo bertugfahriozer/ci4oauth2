@@ -13,6 +13,8 @@ class Oauth
      */
     protected $storage;
 
+    protected $conf;
+
     /**
      * @param string $grantType
      * @param array $config
@@ -30,6 +32,7 @@ class Oauth
             'scope_table' => 'oauth_scopes',
             'public_key_table' => 'oauth_public_keys',
         ));
+        $this->conf=$config;
         $this->server=new \OAuth2\Server($this->storage,$config);
         if(strpos($grantType, "grant-type:jwt-bearer")) $grantType='jwt_bearer';
         call_user_func_array([$this,$grantType],func_get_args());
@@ -69,6 +72,6 @@ class Oauth
 
     public function jwt_bearer()
     {
-        $this->server->addGrantType(new \OAuth2\GrantType\JwtBearer($this->storage,'https://oauth'));
+        $this->server->addGrantType(new \OAuth2\GrantType\JwtBearer($this->storage,$this->conf['aud']));
     }
 }

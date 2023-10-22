@@ -464,7 +464,7 @@ class OauthPdoStorage implements
      */
     public function getClientKey($client_id, $subject)
     {
-        return (array)$this->commonModel->selectOne($this->conf['jwt_table'], ['cilient_id' => $client_id, 'subject' => $subject], 'public_key', '');
+        return $this->commonModel->selectOne($this->conf['jwt_table'], ['client_id' => $client_id, 'subject' => $subject], 'public_key', '')->public_key;
     }
 
     /**
