@@ -1,3 +1,45 @@
+<table>
+  <tr>
+    <th style="width:50%;">English</th>
+    <th style="width:50%;">Türkçe</th>
+  </tr>
+<tr>
+   <td style="width:50%;">
+
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+   - [Configuration](#configuration)
+- [Authorization Types](#authorization-types)
+   - [Authorization Code](#authorization-code)
+   - [Client Credentials](#client-credentials)
+   - [User Credentials](#user-credentials)
+   - [Refresh Token](#refresh-token)
+   - [JWT Bearer](#jwt-bearer)
+     - [JWT Preparation](#jwt-preparation)
+- [Contribution](#contribution)
+- [License](#license)
+</td>
+   <td style="width:50%;">
+
+- [Özellikler](#özellikler)
+- [Kurulum](#kurulum)
+- [Kullanım](#kullanım)
+   - [Ayarlar](#ayarlar)
+   - [Örnek Kullanım](#örnek-kullanım)
+- [Yetkilendirme Türleri](#yetkilendirme-türleri)
+   - [Authorization Code (Yetkilendirme Kodu veri türü)](#authorization-code-yetkilendirme-kodu-veri-türü)
+   - [Client Credentials (İstemci Kimlik Bilgileri)](#client-credentials-i̇stemci-kimlik-bilgileri)
+   - [Kullanıcı Kimlik Bilgileri (User Credentials)](#kullanıcı-kimlik-bilgileri-user-credentials)
+   - [Jetonu Yenile (Refresh Token)](#jetonu-yenile-refresh-token)
+   - [JWT Taşıyıcı (JWT Bearer)](#jwt-taşıyıcı-jwt-bearer)
+     - [JWT Hazırlanışı](#jwt-hazırlanışı)
+- [Katkıda Bulunma](#katkıda-bulunma)
+- [Lisans](#lisans)
+</td>
+</tr>
+</table>
+
 # Codeigniter 4 OAuth2 Library
 
 This is an OAuth2 library that can be used in CodeIgniter 4. It allows users to authorize and authenticate with
@@ -408,7 +450,7 @@ public function createclient()
     }
 ```
 
-## Yetkilendirme Türlerini
+## Yetkilendirme Türleri
 
 ### Authorization Code (Yetkilendirme Kodu veri türü)
 
