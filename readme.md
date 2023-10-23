@@ -18,19 +18,13 @@ To add the library to your project, follow these steps:
 
 2. Use Composer to add the library to your project with the following command:
 
-   phpCopy code
-
    `composer require bertugfahriozer/ci4oauth2`
 
 3. To create the required database tables, run the following command:
-
-   phpCopy code
-
+4. 
    `php spark migrate -all`
 
 4. You'll need to create a configuration file. To create a config file, run the following command:
-
-   phpCopy code
 
    `php spark make:config`
 
