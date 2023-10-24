@@ -153,10 +153,10 @@ class OauthPdoStorage implements
     {
         if ($token = $this->commonModel->selectOne($this->conf['access_token_table'], ['access_token' => $access_token], '*', '')) {
             // convert date string back to timestamp
-            $token['expires'] = strtotime($token->expires);
+            $token->expires = strtotime($token->expires);
         }
 
-        return $token;
+        return (array)$token;
     }
 
     /**
