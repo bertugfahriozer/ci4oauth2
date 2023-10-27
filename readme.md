@@ -9,7 +9,9 @@
 - [Features](#features)
 - [Installation](#installation)
 - [Usage](#usage)
-   - [Configuration](#configuration)
+   - [Adding Filter](#adding-filter)
+   - [URI Routing](#uri-routing)
+   - [Simple Controller and Methods](#simple-controller-and-methods)
 - [Authorization Types](#authorization-types)
    - [Authorization Code](#authorization-code)
    - [Client Credentials](#client-credentials)
@@ -25,7 +27,8 @@
 - [Özellikler](#özellikler)
 - [Kurulum](#kurulum)
 - [Kullanım](#kullanım)
-   - [Ayarlar](#ayarlar)
+   - [Filter Ekleme](#filter-ekleme)
+   - [URI Yönlendirme](#uri-yönlendirme)
    - [Örnek Kullanım](#örnek-kullanım)
 - [Yetkilendirme Türleri](#yetkilendirme-türleri)
    - [Authorization Code (Yetkilendirme Kodu veri türü)](#authorization-code-yetkilendirme-kodu-veri-türü)
@@ -74,23 +77,37 @@ To add the library to your project, follow these steps:
 
 ## Usage
 
-### Configuration
+### Adding Filter
 
-Here's an example of a configuration file you can create for your OAuth2 library:
+We will include the First Filter. The file we will include is "application/Config/Filter.php":
 
 ```php
-<?php namespace App\Config
+<?php namespace App\Config;
 
-class Oauth2Conf extends BaseConfig
+class Filters extends BaseConfig
 {
-   public $config = [
-      'always_issue_new_refresh_token' => true,
-      'refresh_token_lifetime' => 2592000
-   ];
+    public array $aliases = [
+        ...
+        'oauthfilter' => \ci4oauth2\Filters\OauthFilter::class
+    ];
+    
+    ...
+    public array $filters = [
+        'oauthfilter' => ['before' => ['api','api/*']]
+    ];
 }
 ```
 
-The example above is a sample config file created for the Refresh Token method.
+### URI Routing
+
+Here is an example URI structure that will be added to the "App/Config/Routes.php" file:
+
+```php
+$routes->group('api', ['namespace' => 'App\Controllers'], static function ($routes) {
+    $routes->resource('blog',['only'=>['index','show','create', 'update', 'delete']]);
+});
+```
+### Simple Controller and Methods
 
 Usage example of the OAuth2 library:
 
@@ -359,25 +376,35 @@ Kütüphaneyi projenize eklemek için şu adımları izleyin:
 
 ## Kullanım
 
-### Ayarlar
-
-Oluşturduğunu Config dosyası için örnek:
+### Filter ekleme
+İlkli Filtreyi dahil edeceğiz. Dahil edeceğimiz dosya "**application/Config/Filter.php**":
 
 ```php
 <?php namespace App\Config
 
-class Oauth2Conf extends BaseConfig
+class Filters extends BaseConfig
 {
-    public $config = [
-        'always_issue_new_refresh_token' => true,
-        'refresh_token_lifetime' => 2592000
+    public array $aliases = [
+        ...
+        'oauthfilter' => \ci4oauth2\Filters\OauthFilter::class
+    ];
+    
+    ...
+    public array $filters = [
+        'oauthfilter' => ['before' => ['api','api/*']]
     ];
 }
 ```
 
-Yukarıda yazılmış olan Refresh Token metodu için oluşturulmuş örnek bir config dosyasıdır.
+### URI Yönlendirme
 
-Kullanılan OAuth2.0 metoduna göre değişiklik gösterebilir.
+Bu kısımda "**App/Config/Routes.php**" dosyasına eklenecek örnek uri oluşturulmuş şekli:
+
+```php
+$routes->group('api', ['namespace' => 'App\Controllers'], static function ($routes) {
+    $routes->resource('blog',['only'=>['index','show','create', 'update', 'delete']]);
+});
+```
 
 ### Örnek Kullanım
 
