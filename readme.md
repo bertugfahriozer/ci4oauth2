@@ -12,6 +12,7 @@
    - [Adding Filter](#adding-filter)
    - [URI Routing](#uri-routing)
    - [Simple Controller and Methods](#simple-controller-and-methods)
+   - [Example Folder](#example-folder)
 - [Authorization Types](#authorization-types)
    - [Authorization Code](#authorization-code)
    - [Client Credentials](#client-credentials)
@@ -30,6 +31,7 @@
    - [Filter Ekleme](#filter-ekleme)
    - [URI Yönlendirme](#uri-yönlendirme)
    - [Örnek Kullanım](#örnek-kullanım)
+   - [Örnek Klasör](#örnek-klasör)
 - [Yetkilendirme Türleri](#yetkilendirme-türleri)
    - [Authorization Code (Yetkilendirme Kodu veri türü)](#authorization-code-yetkilendirme-kodu-veri-türü)
    - [Client Credentials (İstemci Kimlik Bilgileri)](#client-credentials-i̇stemci-kimlik-bilgileri)
@@ -172,6 +174,9 @@ public function createuser() {
    else return $this->failServerError();
 }
 ```
+### Example Folder
+
+After including the library, you can copy and test the code found in this folder. The example folder path is "ci4oauth2/example".
 
 ## Authorization Types
 
@@ -476,6 +481,9 @@ public function createclient()
         else return $this->failServerError();
     }
 ```
+### Örnek Klasör
+
+Bu klasör içinde bulunan kodları kütüphaneyi dahil ettikten sonra kopyalarak testlerinizi yapabilirsiniz. Örnek klasör yolu "**ci4oauth2/example**".
 
 ## Yetkilendirme Türleri
 
