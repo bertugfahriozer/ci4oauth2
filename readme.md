@@ -66,22 +66,38 @@ To add the library to your project, follow these steps:
 2. Use Composer to add the library to your project with the following command:
 
    `composer require bertugfahriozer/ci4oauth2`
-
-3. To create the required database tables, run the following command:
-4. 
-   `php spark migrate -all`
-
-4. You'll need to create a configuration file. To create a config file, run the following command:
+3. You'll need to create a configuration file. To create a config file, run the following command:
 
    `php spark make:config`
 
-5. You're now ready to use the OAuth2 library in your project!
+4. To create the required database tables, run the following command:
+  
+    `php spark migrate -all`
+
+You're now ready to use the OAuth2 library in your project!
 
 ## Usage
 
+### Configration
+Here's an example of a configuration file you can create for your OAuth2 library:
+
+```php
+<?php namespace App\Config
+
+class Oauth2Conf extends BaseConfig
+{
+   public $config = [
+      'always_issue_new_refresh_token' => true,
+      'refresh_token_lifetime' => 2592000
+   ];
+}
+```
+
+The example above is a sample config file created for the Refresh Token method.
+
 ### Adding Filter
 
-We will include the First Filter. The file we will include is "application/Config/Filter.php":
+We will include the First Filter. The file we will include is "**application/Config/Filter.php**":
 
 ```php
 <?php namespace App\Config;
@@ -102,7 +118,7 @@ class Filters extends BaseConfig
 
 ### URI Routing
 
-Here is an example URI structure that will be added to the "App/Config/Routes.php" file:
+Here is an example URI structure that will be added to the "**App/Config/Routes.php**" file:
 
 ```php
 $routes->group('api', ['namespace' => 'App\Controllers'], static function ($routes) {
@@ -176,7 +192,7 @@ public function createuser() {
 ```
 ### Example Folder
 
-After including the library, you can copy and test the code found in this folder. The example folder path is "ci4oauth2/example".
+After including the library, you can copy and test the code found in this folder. The example folder path is "**ci4oauth2/example**".
 
 ## Authorization Types
 
@@ -365,21 +381,41 @@ Kütüphaneyi projenize eklemek için şu adımları izleyin:
    composer require bertugfahriozer/ci4oauth2
    ```
 
+3. Bir adet config dosyasına ihtiyacınız olacak. Config dosyası oluşturmak için aşağıdaki komutu çalıştırın:
+
+    ```php
+    php spark make:config
+   ```
+   
 3. Gerekli veritabanı tablolarını oluşturmak için aşağıdaki komutu çalıştırın:
 
     ```php
     php spark migrate -all
     ```
 
-4. Bir adet config dosyasına ihtiyacınız olacak. Config dosyası oluşturmak için aşağıdaki komutu çalıştırın:
-
-    ```php
-   php spark make:config
-   ```
-
-5. Artık OAuth2 kütüphanesi projenizde kullanımak için temelleri hazır!
+Artık OAuth2 kütüphanesi projenizde kullanımak için temelleri hazır!
 
 ## Kullanım
+
+### Ayarlar
+
+Oluşturduğunu Config dosyası için örnek:
+
+```php
+<?php namespace App\Config
+
+class Oauth2Conf extends BaseConfig
+{
+    public $config = [
+        'always_issue_new_refresh_token' => true,
+        'refresh_token_lifetime' => 2592000
+    ];
+}
+```
+
+Yukarıda yazılmış olan Refresh Token metodu için oluşturulmuş örnek bir config dosyasıdır.
+
+Kullanılan OAuth2.0 metoduna göre değişiklik gösterebilir.
 
 ### Filter ekleme
 İlkli Filtreyi dahil edeceğiz. Dahil edeceğimiz dosya "**application/Config/Filter.php**":
