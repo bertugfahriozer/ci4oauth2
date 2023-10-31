@@ -20,7 +20,7 @@ class RateLimit implements FilterInterface
     public function before(RequestInterface $request, $arguments = null)
     {
         if (Services::throttler()->check(md5($request->getIPAddress()), config('Oauth2Conf')->rateLimitCap, MINUTE) === false)
-            return Services::response()->setContentType('application/json')->setStatusCode(429)->setJSON(['error'=>'Too Many Requests']);
+            return Services::response()->setContentType('application/json')->setStatusCode(429)->setJSON(['error'=>'Too Many Requests','error_description'=>'You can send requests '.config('Oauth2Conf')->rateLimitCap.' times in a minute !']);
     }
 
     /**

@@ -16,6 +16,10 @@ class Oauth2Conf extends BaseConfig
         'scope_table' => 'oauth_scopes',
         'public_key_table' => 'oauth_public_keys'];
 
+    public array $jwtConf=[
+        'aud'=> 'https://oauth' // you must edit here
+    ];
+
     public int $oauthFilterCap = 60;
     public int $rateLimitCap = 2;
 
@@ -32,7 +36,7 @@ class Oauth2Conf extends BaseConfig
      * uncomment the "ARGON2i/D Algorithm" options to suit your needs
      */
     public $hashAlgorithm = PASSWORD_DEFAULT;
-    public object $phpHashConfig = (object)[
+    public array $phpHashConfig = [
         'hashMemoryCost' => 2048,
         'hashTimeCost' => 4,
         'hashThreads' => 4,

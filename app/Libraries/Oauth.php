@@ -8,12 +8,11 @@ class Oauth
      * @var \OAuth2\Server
      */
     public $server;
+
     /**
      * @var \OAuth2\Storage\Pdo
      */
     protected $storage;
-
-    protected $conf;
 
     /**
      * @param string $grantType
@@ -61,6 +60,6 @@ class Oauth
 
     public function jwt_bearer()
     {
-        $this->server->addGrantType(new \OAuth2\GrantType\JwtBearer($this->storage,$this->conf['aud']));
+        $this->server->addGrantType(new \OAuth2\GrantType\JwtBearer($this->storage,config('oauth2Conf')->jwtConf['aud']));
     }
 }

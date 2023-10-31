@@ -29,11 +29,11 @@ class OauthFilter implements FilterInterface
     public function before(RequestInterface $request, $arguments = null)
     {
         if (Services::throttler()->check(base64_encode($request->getIPAddress()), config('Oauth2Conf')->oauthFilterCap, MINUTE) === false)
-            return Services::response()->setContentType('application/json')->setStatusCode(429)->setJSON(['error'=>'Too Many Requests.You must wait 10 seconds !']);
+            return Services::response()->setContentType('application/json')->setStatusCode(429)->setJSON(['error'=>'Too Many Requests','error_description'=>'You can send requests '.config('Oauth2Conf')->oauthFilterCap.' times in a minute !']);
 
         $oauth = new Oauth();
-        $request = Request::createFromGlobals();
-        if(!$oauth->server->verifyResourceRequest($request)) die($oauth->server->getResponse()->send());
+        $req = Request::createFromGlobals();
+        if(!$oauth->server->verifyResourceRequest($req)) die($oauth->server->getResponse()->send());
     }
 
     /**

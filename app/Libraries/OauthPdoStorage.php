@@ -363,9 +363,9 @@ class OauthPdoStorage implements
     // use a secure hashing algorithm when storing passwords. Override this for your application
     protected function hashPassword($password)
     {
-        if ((defined('PASSWORD_ARGON2I') && config('oauth2Conf')->hashAlgorithm == PASSWORD_ARGON2I) || (defined('PASSWORD_ARGON2ID') && config('oauth2Conf')->phpHashConfighashAlgorithm == PASSWORD_ARGON2ID))
-            $hashOptions = ['memory_cost' => config('oauth2Conf')->phpHashConfig->hashMemoryCost, 'time_cost' => config('oauth2Conf')->phpHashConfig->hashTimeCost, 'threads' => config('oauth2Conf')->phpHashConfig->hashThreads];
-        else $hashOptions = ['cost' => config('oauth2Conf')->hashCost];
+        if ((defined('PASSWORD_ARGON2I') && config('oauth2Conf')->hashAlgorithm == PASSWORD_ARGON2I) || (defined('PASSWORD_ARGON2ID') && config('oauth2Conf')->hashAlgorithm == PASSWORD_ARGON2ID))
+            $hashOptions = ['memory_cost' => config('oauth2Conf')->phpHashConfig['hashMemoryCost'], 'time_cost' => config('oauth2Conf')->phpHashConfig['hashTimeCost'], 'threads' => config('oauth2Conf')->phpHashConfig['hashThreads']];
+        else $hashOptions = ['cost' => config('oauth2Conf')->phpHashConfig['hashCost']];
         return password_hash(base64_encode(hash('sha384', $password, true)), config('oauth2Conf')->hashAlgorithm, $hashOptions);
     }
 
