@@ -2,7 +2,7 @@
 
 namespace App\Controllers;
 
-use ci4oauth2\example\Models\BlogModel;
+use App\Models\BlogModel;
 
 class Blog extends BaseRestfull
 {

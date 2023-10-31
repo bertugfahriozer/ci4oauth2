@@ -61,7 +61,8 @@ class Home extends BaseController
         $client_id = 'testbertug';
         $user_id = 'bertutest';
         helper('oauth');
-        $jwt = generateJWT($private_key, $client_id, $user_id, 'https://oauth');
+        config('oauth2Conf')->jwtConf['aud']='https://oauth';
+        $jwt = generateJWT($private_key, $client_id, $user_id, config('oauth2Conf')->jwtConf['aud']);
         return $jwt;
     }
 }

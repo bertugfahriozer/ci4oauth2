@@ -61,11 +61,6 @@ abstract class BaseController extends Controller
         // E.g.: $this->session = \Config\Services::session();
         $req = Request::createFromGlobals();
 
-        /**
-         * $conf may will be
-
-        */
-
         if(empty($req->request) || empty($this->request->getPost('grant_type'))) {
             /*$conf=['aud'=>'https://oauth'];
             if($this->request->getPost('response_type')=='token') {
