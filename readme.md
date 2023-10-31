@@ -138,17 +138,19 @@ The example above is a sample config file created for the Refresh Token method.
 We will include the First Filter. The file we will include is "**application/Config/Filter.php**":
 
 ```php
-<?php namespace App\Config;
+<?php namespace Config
 
 class Filters extends BaseConfig
 {
     public array $aliases = [
         ...
-        'oauthfilter' => \ci4oauth2\Filters\OauthFilter::class
+        'oauthfilter' => \ci4oauth2\Filters\OauthFilter::class,
+        'rateLimit' => \ci4oauth2\Filters\RateLimit::class
     ];
     
     ...
     public array $filters = [
+        'rateLimit' => ['before' => ['login', 'createclient', 'createuser', 'genjwt', 'token']],
         'oauthfilter' => ['before' => ['api','api/*']]
     ];
 }
@@ -495,17 +497,19 @@ Kullanılan OAuth2.0 metoduna göre değişiklik gösterebilir.
 İlkli Filtreyi dahil edeceğiz. Dahil edeceğimiz dosya "**application/Config/Filter.php**":
 
 ```php
-<?php namespace App\Config
+<?php namespace Config
 
 class Filters extends BaseConfig
 {
     public array $aliases = [
         ...
-        'oauthfilter' => \ci4oauth2\Filters\OauthFilter::class
+        'oauthfilter' => \ci4oauth2\Filters\OauthFilter::class,
+        'rateLimit' => \ci4oauth2\Filters\RateLimit::class
     ];
     
     ...
     public array $filters = [
+        'rateLimit' => ['before' => ['login', 'createclient', 'createuser', 'genjwt', 'token']],
         'oauthfilter' => ['before' => ['api','api/*']]
     ];
 }
