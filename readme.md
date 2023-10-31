@@ -84,14 +84,50 @@ You're now ready to use the OAuth2 library in your project!
 Here's an example of a configuration file you can create for your OAuth2 library:
 
 ```php
-<?php namespace App\Config
+<?php
+
+namespace Config;
+
+use CodeIgniter\Config\BaseConfig;
 
 class Oauth2Conf extends BaseConfig
 {
-   public $config = [
-      'always_issue_new_refresh_token' => true,
-      'refresh_token_lifetime' => 2592000
-   ];
+    public array $tables = ['client_table' => 'oauth_clients',
+        'access_token_table' => 'oauth_access_tokens',
+        'refresh_token_table' => 'oauth_refresh_tokens',
+        'code_table' => 'oauth_authorization_codes',
+        'user_table' => 'oauth_users',
+        'jwt_table' => 'oauth_jwt',
+        'jti_table' => 'oauth_jti',
+        'scope_table' => 'oauth_scopes',
+        'public_key_table' => 'oauth_public_keys'];
+
+    public array $jwtConf=[
+        'aud'=> 'https://oauth' // you must edit here
+    ];
+
+    public int $oauthFilterCap = 60;
+    public int $rateLimitCap = 2;
+
+    /* --------------------------------------------------------------------
+     * Encryption Algorithm to use
+     * --------------------------------------------------------------------
+     * Valid values are
+     * - PASSWORD_DEFAULT (default)
+     * - PASSWORD_BCRYPT
+     * - PASSWORD_ARGON2I  - As of PHP 7.2 only if compiled with support for it
+     * - PASSWORD_ARGON2ID - As of PHP 7.3 only if compiled with support for it
+     *
+     * If you choose to use any ARGON algorithm, then you might want to
+     * uncomment the "ARGON2i/D Algorithm" options to suit your needs
+     */
+    public $hashAlgorithm = PASSWORD_DEFAULT;
+    public array $phpHashConfig = [
+        'hashMemoryCost' => 2048,
+        'hashTimeCost' => 4,
+        'hashThreads' => 4,
+        'hashCost' => 10
+    ];
 }
 ```
 
@@ -404,13 +440,49 @@ Artık OAuth2 kütüphanesi projenizde kullanımak için temelleri hazır!
 Oluşturduğunu Config dosyası için örnek:
 
 ```php
-<?php namespace App\Config
+<?php
+
+namespace Config;
+
+use CodeIgniter\Config\BaseConfig;
 
 class Oauth2Conf extends BaseConfig
 {
-    public $config = [
-        'always_issue_new_refresh_token' => true,
-        'refresh_token_lifetime' => 2592000
+    public array $tables = ['client_table' => 'oauth_clients',
+        'access_token_table' => 'oauth_access_tokens',
+        'refresh_token_table' => 'oauth_refresh_tokens',
+        'code_table' => 'oauth_authorization_codes',
+        'user_table' => 'oauth_users',
+        'jwt_table' => 'oauth_jwt',
+        'jti_table' => 'oauth_jti',
+        'scope_table' => 'oauth_scopes',
+        'public_key_table' => 'oauth_public_keys'];
+
+    public array $jwtConf=[
+        'aud'=> 'https://oauth' // you must edit here
+    ];
+
+    public int $oauthFilterCap = 60;
+    public int $rateLimitCap = 2;
+
+    /* --------------------------------------------------------------------
+     * Encryption Algorithm to use
+     * --------------------------------------------------------------------
+     * Valid values are
+     * - PASSWORD_DEFAULT (default)
+     * - PASSWORD_BCRYPT
+     * - PASSWORD_ARGON2I  - As of PHP 7.2 only if compiled with support for it
+     * - PASSWORD_ARGON2ID - As of PHP 7.3 only if compiled with support for it
+     *
+     * If you choose to use any ARGON algorithm, then you might want to
+     * uncomment the "ARGON2i/D Algorithm" options to suit your needs
+     */
+    public $hashAlgorithm = PASSWORD_DEFAULT;
+    public array $phpHashConfig = [
+        'hashMemoryCost' => 2048,
+        'hashTimeCost' => 4,
+        'hashThreads' => 4,
+        'hashCost' => 10
     ];
 }
 ```
