@@ -33,43 +33,15 @@ class OauthPdoStorage implements
 
     protected $commonModel;
 
-    /* --------------------------------------------------------------------
-     * Encryption Algorithm to use
-     * --------------------------------------------------------------------
-     * Valid values are
-     * - PASSWORD_DEFAULT (default)
-     * - PASSWORD_BCRYPT
-     * - PASSWORD_ARGON2I  - As of PHP 7.2 only if compiled with support for it
-     * - PASSWORD_ARGON2ID - As of PHP 7.3 only if compiled with support for it
-     *
-     * If you choose to use any ARGON algorithm, then you might want to
-     * uncomment the "ARGON2i/D Algorithm" options to suit your needs
-     */
-
     /**
      * @param mixed $connection
      * @param array $config
      *
      * @throws InvalidArgumentException
      */
-    public function __construct($config = array())
+    public function __construct()
     {
-        $this->conf = array_merge(array(
-            'client_table' => 'oauth_clients',
-            'access_token_table' => 'oauth_access_tokens',
-            'refresh_token_table' => 'oauth_refresh_tokens',
-            'code_table' => 'oauth_authorization_codes',
-            'user_table' => 'oauth_users',
-            'jwt_table' => 'oauth_jwt',
-            'jti_table' => 'oauth_jti',
-            'scope_table' => 'oauth_scopes',
-            'public_key_table' => 'oauth_public_keys',
-            'hashAlgorithm' => PASSWORD_DEFAULT,
-            'hashMemoryCost' => 2048,
-            'hashTimeCost' => 4,
-            'hashThreads' => 4,
-            'hashCost' => 10
-        ), $config);
+        $this->conf = config('oauth2Conf')->tables;
         $this->commonModel = new CommonModel();
     }
 
@@ -381,7 +353,7 @@ class OauthPdoStorage implements
     protected function checkPassword($user, $password)
     {
         if(!password_verify(base64_encode(hash('sha384', $password, true)), $user['password'])) return false;
-        if (password_needs_rehash($user['password'], $this->conf['hashAlgorithm'])) {
+        if (password_needs_rehash($user['password'], config('oauth2Conf')->hashAlgorithm)) {
             $user['password'] = $password;
             $this->commonModel->edit($this->conf['user_table'], $user, ['username' => $user['user_id']]);
         }
@@ -391,10 +363,10 @@ class OauthPdoStorage implements
     // use a secure hashing algorithm when storing passwords. Override this for your application
     protected function hashPassword($password)
     {
-        if ((defined('PASSWORD_ARGON2I') && $this->conf['hashAlgorithm'] == PASSWORD_ARGON2I) || (defined('PASSWORD_ARGON2ID') && $this->conf['hashAlgorithm'] == PASSWORD_ARGON2ID))
-            $hashOptions = ['memory_cost' => $this->conf['hashMemoryCost'], 'time_cost' => $this->conf['hashTimeCost'], 'threads' => $this->conf['hashThreads']];
-        else $hashOptions = ['cost' => $this->conf['hashCost']];
-        return password_hash(base64_encode(hash('sha384', $password, true)), $this->conf['hashAlgorithm'], $hashOptions);
+        if ((defined('PASSWORD_ARGON2I') && config('oauth2Conf')->hashAlgorithm == PASSWORD_ARGON2I) || (defined('PASSWORD_ARGON2ID') && config('oauth2Conf')->phpHashConfighashAlgorithm == PASSWORD_ARGON2ID))
+            $hashOptions = ['memory_cost' => config('oauth2Conf')->phpHashConfig->hashMemoryCost, 'time_cost' => config('oauth2Conf')->phpHashConfig->hashTimeCost, 'threads' => config('oauth2Conf')->phpHashConfig->hashThreads];
+        else $hashOptions = ['cost' => config('oauth2Conf')->hashCost];
+        return password_hash(base64_encode(hash('sha384', $password, true)), config('oauth2Conf')->hashAlgorithm, $hashOptions);
     }
 
     /**
@@ -521,6 +493,7 @@ class OauthPdoStorage implements
     }
 
     /**
+     * TODO: kodlanacak.
      * @param mixed $client_id
      * @return mixed
      */
@@ -535,6 +508,7 @@ class OauthPdoStorage implements
     }
 
     /**
+     * TODO: kodlanacak.
      * @param mixed $client_id
      * @return mixed
      */
@@ -549,6 +523,7 @@ class OauthPdoStorage implements
     }
 
     /**
+     * TODO: kodlanacak.
      * @param mixed $client_id
      * @return string
      */
@@ -562,98 +537,5 @@ class OauthPdoStorage implements
         }
 
         return 'RS256';
-    }
-
-    /**
-     * DDL to create OAuth2 database and tables for PDO storage
-     *
-     * @see https://github.com/dsquier/oauth2-server-php-mysql
-     *
-     * @param string $dbName
-     * @return string
-     */
-    public function getBuildSql($dbName = 'oauth2_server_php')
-    {
-        $sql = "
-        CREATE TABLE {$this->conf['client_table']} (
-          client_id             VARCHAR(80)   NOT NULL,
-          client_secret         VARCHAR(80),
-          redirect_uri          VARCHAR(2000),
-          grant_types           VARCHAR(80),
-          scope                 VARCHAR(4000),
-          user_id               VARCHAR(80),
-          PRIMARY KEY (client_id)
-        );
-
-            CREATE TABLE {$this->conf['access_token_table']} (
-              access_token         VARCHAR(40)    NOT NULL,
-              client_id            VARCHAR(80)    NOT NULL,
-              user_id              VARCHAR(80),
-              expires              TIMESTAMP      NOT NULL,
-              scope                VARCHAR(4000),
-              PRIMARY KEY (access_token)
-            );
-
-            CREATE TABLE {$this->conf['code_table']} (
-              authorization_code  VARCHAR(40)    NOT NULL,
-              client_id           VARCHAR(80)    NOT NULL,
-              user_id             VARCHAR(80),
-              redirect_uri        VARCHAR(2000),
-              expires             TIMESTAMP      NOT NULL,
-              scope               VARCHAR(4000),
-              id_token            VARCHAR(1000),
-              code_challenge        VARCHAR(1000),
-              code_challenge_method VARCHAR(20),
-              PRIMARY KEY (authorization_code)
-            );
-
-            CREATE TABLE {$this->conf['refresh_token_table']} (
-              refresh_token       VARCHAR(40)    NOT NULL,
-              client_id           VARCHAR(80)    NOT NULL,
-              user_id             VARCHAR(80),
-              expires             TIMESTAMP      NOT NULL,
-              scope               VARCHAR(4000),
-              PRIMARY KEY (refresh_token)
-            );
-
-            CREATE TABLE {$this->conf['user_table']} (
-              username            VARCHAR(80),
-              password            VARCHAR(80),
-              first_name          VARCHAR(80),
-              last_name           VARCHAR(80),
-              email               VARCHAR(80),
-              email_verified      BOOLEAN,
-              scope               VARCHAR(4000)
-            );
-
-            CREATE TABLE {$this->conf['scope_table']} (
-              scope               VARCHAR(80)  NOT NULL,
-              is_default          BOOLEAN,
-              PRIMARY KEY (scope)
-            );
-
-            CREATE TABLE {$this->conf['jwt_table']} (
-              client_id           VARCHAR(80)   NOT NULL,
-              subject             VARCHAR(80),
-              public_key          VARCHAR(2000) NOT NULL
-            );
-
-            CREATE TABLE {$this->conf['jti_table']} (
-              issuer              VARCHAR(80)   NOT NULL,
-              subject             VARCHAR(80),
-              audiance            VARCHAR(80),
-              expires             TIMESTAMP     NOT NULL,
-              jti                 VARCHAR(2000) NOT NULL
-            );
-
-            CREATE TABLE {$this->conf['public_key_table']} (
-              client_id            VARCHAR(80),
-              public_key           VARCHAR(2000),
-              private_key          VARCHAR(2000),
-              encryption_algorithm VARCHAR(100) DEFAULT 'RS256'
-            )
-        ";
-
-        return $sql;
     }
 }

@@ -61,21 +61,38 @@ abstract class BaseController extends Controller
         // E.g.: $this->session = \Config\Services::session();
         $req = Request::createFromGlobals();
 
-        //dd($this->config);
-        $conf=['aud'=>'https://oauth'];
+        /**
+         * $conf may will be
+
+        */
+
         if(empty($req->request) || empty($this->request->getPost('grant_type'))) {
+            /*$conf=['aud'=>'https://oauth'];
             if($this->request->getPost('response_type')=='token') {
                 $conf['allow_implicit'] = true;
                 $oauth = new Oauth($this->request->getPost('response_type'), $conf);
-            } if($this->request->getPost('response_type')=='code'){
+            }
+            if($this->request->getPost('response_type')=='code'){
                 $oauth = new Oauth($this->request->getPost('response_type'));
             } else {
                 $oauth = new Oauth();
-            }
+            }*/
+            $oauth = new Oauth();
         }
         else {
-            if($this->request->getPost('grant_type')=='refresh_token') $conf['always_issue_new_refresh_token'] = true;
-            $oauth = new Oauth($this->request->getPost('grant_type'),$conf);
+            /*$conf=[];
+            if($this->request->getPost('grant_type')=='urn:ietf:params:oauth:grant-type:jwt-bearer') {
+                $conf['use_jwt_access_tokens'] = true;
+            }
+            if($this->request->getPost('grant_type')=='client_credentials') {
+                $conf['allow_credentials_in_request_body'] = false;
+            }
+            if($this->request->getPost('grant_type')=='refresh_token') {
+                $conf['always_issue_new_refresh_token'] = true;
+                $conf['refresh_token_lifetime'] = 2419200;
+            }
+            $oauth = new Oauth($this->request->getPost('grant_type'),$conf);*/
+            $oauth = new Oauth($this->request->getPost('grant_type'));
         }
 
         $this->respond = $oauth->server->handleTokenRequest($req);

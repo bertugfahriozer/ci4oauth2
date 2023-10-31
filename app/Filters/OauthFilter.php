@@ -6,6 +6,7 @@ use ci4oauth2\Libraries\Oauth;
 use CodeIgniter\Filters\FilterInterface;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
+use Config\Services;
 use OAuth2\Request;
 
 class OauthFilter implements FilterInterface
@@ -27,11 +28,12 @@ class OauthFilter implements FilterInterface
      */
     public function before(RequestInterface $request, $arguments = null)
     {
+        if (Services::throttler()->check(base64_encode($request->getIPAddress()), config('Oauth2Conf')->oauthFilterCap, MINUTE) === false)
+            return Services::response()->setContentType('application/json')->setStatusCode(429)->setJSON(['error'=>'Too Many Requests.You must wait 10 seconds !']);
+
         $oauth = new Oauth();
         $request = Request::createFromGlobals();
-        if(!$oauth->server->verifyResourceRequest($request)){
-            die($oauth->server->getResponse()->send());
-        }
+        if(!$oauth->server->verifyResourceRequest($request)) die($oauth->server->getResponse()->send());
     }
 
     /**
