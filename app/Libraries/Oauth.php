@@ -20,7 +20,7 @@ class Oauth
      */
     public function __construct(string $grantType='password', array $config=[])
     {
-        $this->storage=new \ci4oauth2\Libraries\OauthPdoStorage();
+        $this->storage=new \OAuth2\Storage\Pdo(['dsn'=>'mysql:dbname='.getenv('database.default.database').';host='.getenv('database.default.hostname'),'username'=>getenv('database.default.username'),'password'=>getenv('database.default.password')]);
         $this->server=new \OAuth2\Server($this->storage,$config);
         if(strpos($grantType, "grant-type:jwt-bearer")) $grantType='jwt_bearer';
         call_user_func_array([$this,$grantType],func_get_args());
