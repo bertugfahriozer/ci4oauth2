@@ -15,9 +15,9 @@ class Blog extends BaseRestfull
 
     public function index()
     {
-        $limit=$this->request->getGet('limit');
+        $limit=$this->request->getGet('limit')??10;
         $page=0;
-        if(!empty($this->request->getGet('p')) && $this->request->getGet('p')>1) $page=($this->request->getGet('p')-1)*15;
+        if(!empty($this->request->getGet('p')) && $this->request->getGet('p')>1) $page=($this->request->getGet('p')-1)*$limit;
         $result=$this->model->findAll($limit,$page);
         if(empty($result)) return $this->respondNoContent();
         return $this->respond($result);

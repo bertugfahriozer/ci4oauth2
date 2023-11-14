@@ -1,12 +1,9 @@
 <?php namespace App\Controllers;
 
-use ci4oauth2\Libraries\OauthPdoStorage;
-
 class Home extends BaseController
 {
     public function index()
     {
-        echo uniqid();
         return view('welcome_message');
     }
 
@@ -29,7 +26,7 @@ class Home extends BaseController
         }
         $valData = ($vald);
         if ($this->validate($valData) == false) return $this->failValidationErrors($this->validator->getErrors());
-        $oauth = new OauthPdoStorage();
+        $oauth = new \ci4oauth2\Libraries\OauthPdoStorage();
         $result = $oauth->setClientDetails($this->request->getPost('client_id'), $this->request->getPost('client_secret'), $this->request->getPost('redirect_url'), $this->request->getPost('grant_types'));
         if ($result === 0) return $this->respondCreated(['result' => 'client created']);
         else if ($result === true) return $this->respondUpdated(['result' => 'client updated.']);
@@ -43,7 +40,7 @@ class Home extends BaseController
             'password' => ['label' => '', 'rules' => 'required']
         ]);
         if ($this->validate($valData) == false) return $this->failValidationErrors($this->validator->getErrors());
-        $oauth = new OauthPdoStorage();
+        $oauth = new \ci4oauth2\Libraries\OauthPdoStorage();
         $result = $oauth->setUser($this->request->getPost('username'), $this->request->getPost('password'));
         if ($result === 0) return $this->respondCreated(['result' => 'user created']);
         else if ($result === true) return $this->respondUpdated(['result' => 'user updated.']);

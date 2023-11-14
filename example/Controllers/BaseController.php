@@ -10,7 +10,6 @@ use CodeIgniter\HTTP\ResponseInterface;
 use ci4oauth2\Libraries\Oauth;
 use Psr\Log\LoggerInterface;
 use CodeIgniter\API\ResponseTrait;
-use OAuth2\Request;
 
 /**
  * Class BaseController
@@ -59,8 +58,6 @@ abstract class BaseController extends Controller
         // Preload any models, libraries, etc, here.
 
         // E.g.: $this->session = \Config\Services::session();
-        $req = Request::createFromGlobals();
-
         if(empty($req->request) || empty($this->request->getPost('grant_type'))) {
             /*$conf=['aud'=>'https://oauth'];
             if($this->request->getPost('response_type')=='token') {
@@ -90,6 +87,6 @@ abstract class BaseController extends Controller
             $oauth = new Oauth($this->request->getPost('grant_type'));
         }
 
-        $this->respond = $oauth->server->handleTokenRequest($req);
+        $this->respond = $oauth->server->handleTokenRequest(\OAuth2\Request::createFromGlobals());
     }
 }

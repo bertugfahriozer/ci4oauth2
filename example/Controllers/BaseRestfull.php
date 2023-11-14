@@ -1,7 +1,6 @@
 <?php namespace App\Controllers;
 
 use ci4commonmodel\Models\CommonModel;
-use CodeIgniter\HTTP\CLIRequest;
 use CodeIgniter\HTTP\IncomingRequest;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
